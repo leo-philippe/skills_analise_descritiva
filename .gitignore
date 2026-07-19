@@ -1,0 +1,20 @@
+# Scratch temporário (checkpoints de análise)
+.scratch/
+
+# Outputs gerados (não versionar dados do cliente)
+*.pdf
+*.csv
+*.xlsx
+*.xls
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
