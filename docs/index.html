@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Pipeline completo de análise descritiva para Claude Code — do arquivo bruto ao dashboard ou relatório em 9 fases estruturadas.">
+  <title>analise-descritiva-pipeline — Skill para Claude Code</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0; padding: 0;
+      font: 14px -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #faf9f5;
+    }
+    img { max-width: 100%; }
+  </style>
+</head>
+<body>
+
+<style>
+  :root {
+    --bg:#F0F4F8;--surface:#FFFFFF;--surface-2:#E4ECF4;--border:#C8D6E5;
+    --text:#0F1B2D;--text-2:#4A6077;--text-3:#7A94AA;
+    --accent:#0369A1;--accent-light:#DBEAFE;
+    --violet:#6D28D9;--violet-light:#EDE9FE;
+    --amber:#B45309;--amber-light:#FEF3C7;
+    --green:#047857;--green-light:#D1FAE5;
+    --shadow-sm:0 1px 2px rgba(15,27,45,.06);
+    --shadow:0 2px 6px rgba(15,27,45,.08);
+    --shadow-md:0 4px 16px rgba(15,27,45,.10);
+    --mono:Consolas,'Courier New',monospace;
+  }
+  @media(prefers-color-scheme:dark){:root{
+    --bg:#07101E;--surface:#0F1D30;--surface-2:#172840;--border:#223450;
+    --text:#DDE8F4;--text-2:#7A9ABB;--text-3:#456077;
+    --accent:#38BDF8;--accent-light:#0B2A42;
+    --violet:#A78BFA;--violet-light:#1C1035;
+    --amber:#FBB024;--amber-light:#281A04;
+    --green:#34D399;--green-light:#052E1E;
+    --shadow-sm:0 1px 3px rgba(0,0,0,.3);--shadow:0 2px 8px rgba(0,0,0,.28);--shadow-md:0 4px 20px rgba(0,0,0,.4);
+  }}
+  :root[data-theme="light"]{--bg:#F0F4F8;--surface:#FFFFFF;--surface-2:#E4ECF4;--border:#C8D6E5;--text:#0F1B2D;--text-2:#4A6077;--text-3:#7A94AA;--accent:#0369A1;--accent-light:#DBEAFE;--violet:#6D28D9;--violet-light:#EDE9FE;--amber:#B45309;--amber-light:#FEF3C7;--green:#047857;--green-light:#D1FAE5;--shadow-sm:0 1px 2px rgba(15,27,45,.06);--shadow:0 2px 6px rgba(15,27,45,.08);--shadow-md:0 4px 16px rgba(15,27,45,.10);}
+  :root[data-theme="dark"]{--bg:#07101E;--surface:#0F1D30;--surface-2:#172840;--border:#223450;--text:#DDE8F4;--text-2:#7A9ABB;--text-3:#456077;--accent:#38BDF8;--accent-light:#0B2A42;--violet:#A78BFA;--violet-light:#1C1035;--amber:#FBB024;--amber-light:#281A04;--green:#34D399;--green-light:#052E1E;--shadow-sm:0 1px 3px rgba(0,0,0,.3);--shadow:0 2px 8px rgba(0,0,0,.28);--shadow-md:0 4px 20px rgba(0,0,0,.4);}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;font-size:15px;}
+  nav{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:2px;overflow-x:auto;scrollbar-width:none;box-shadow:var(--shadow-sm);}
+  nav::-webkit-scrollbar{display:none;}
+  .nav-brand{font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--accent);white-space:nowrap;padding:13px 16px 13px 0;border-right:1px solid var(--border);margin-right:8px;}
+  .nav-brand span{color:var(--text-3);font-weight:400;}
+  nav a{font-size:12.5px;color:var(--text-2);text-decoration:none;padding:13px 10px;white-space:nowrap;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;font-weight:500;}
+  nav a:hover{color:var(--accent);border-bottom-color:var(--accent);}
+  main{max-width:1080px;margin:0 auto;padding:48px 24px 96px;}
+  .hero{margin-bottom:56px;display:grid;grid-template-columns:1fr 380px;gap:48px;align-items:center;}
+  .eyebrow{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;}
+  h1{font-size:clamp(28px,4.5vw,42px);font-weight:800;color:var(--text);line-height:1.1;letter-spacing:-.025em;text-wrap:balance;margin-bottom:14px;}
+  .hero-sub{font-size:15.5px;color:var(--text-2);max-width:520px;line-height:1.7;margin-bottom:22px;}
+  .cmd-row{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 18px;box-shadow:var(--shadow);max-width:360px;}
+  .cmd-prompt{font-family:var(--mono);font-size:12px;color:var(--text-3);}
+  .cmd-text{font-family:var(--mono);font-size:13.5px;font-weight:700;color:var(--accent);}
+  .cmd-cursor{display:inline-block;width:8px;height:15px;background:var(--accent);border-radius:1px;opacity:.7;animation:blink 1.1s step-end infinite;vertical-align:text-bottom;margin-left:1px;}
+  @keyframes blink{0%,100%{opacity:.7}50%{opacity:0}}
+  section{margin-bottom:60px;}
+  .sec-head{display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+  .badge{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:4px;white-space:nowrap;}
+  .b-blue{background:var(--accent-light);color:var(--accent);}
+  .b-violet{background:var(--violet-light);color:var(--violet);}
+  .b-amber{background:var(--amber-light);color:var(--amber);}
+  .b-green{background:var(--green-light);color:var(--green);}
+  .sec-head h2{font-size:19px;font-weight:700;color:var(--text);letter-spacing:-.01em;}
+  .callout{background:var(--accent-light);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;padding:12px 16px;margin-bottom:18px;font-size:13px;color:var(--text-2);line-height:1.6;}
+  .analogy{background:var(--amber-light);border-left:3px solid var(--amber);border-radius:0 6px 6px 0;padding:12px 16px;margin-bottom:14px;font-size:13.5px;color:var(--text-2);line-height:1.65;font-style:italic;}
+
+  /* Chat mock */
+  .chat-mock{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-md);}
+  .chat-bar{background:var(--surface-2);border-bottom:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;gap:8px;}
+  .chat-dots{display:flex;gap:5px;}
+  .chat-dot{width:10px;height:10px;border-radius:50%;}
+  .chat-title{font-size:11px;font-weight:700;color:var(--text-3);margin-left:4px;letter-spacing:.04em;}
+  .chat-body{padding:16px;}
+  .msg{margin-bottom:10px;font-size:12.5px;line-height:1.5;}
+  .msg-user{text-align:right;}
+  .msg-bubble{display:inline-block;padding:7px 11px;border-radius:10px;max-width:85%;}
+  .msg-user .msg-bubble{background:var(--accent);color:#fff;border-radius:10px 10px 2px 10px;}
+  .msg-ai .msg-bubble{background:var(--surface-2);color:var(--text-2);border-radius:10px 10px 10px 2px;}
+  .msg-ai .msg-bubble strong{color:var(--text);}
+  .msg-ai .msg-bubble ul{padding-left:14px;margin-top:4px;}
+  .msg-ai .msg-bubble li{margin-bottom:2px;}
+  .typing{display:flex;gap:3px;padding:2px 0;}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--text-3);animation:bounce .9s ease-in-out infinite;}
+  .dot:nth-child(2){animation-delay:.15s;}
+  .dot:nth-child(3){animation-delay:.3s;}
+  @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+
+  /* Pipeline */
+  .pipeline-wrap{margin:0 0 24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 24px 20px;box-shadow:var(--shadow);}
+  .pipeline-title{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);margin-bottom:3px;}
+  .pipeline-sub{font-size:13px;color:var(--text-2);margin-bottom:20px;line-height:1.5;}
+  .pipeline{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+  .pipeline::-webkit-scrollbar{height:4px;}
+  .pipeline::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+  .pnode{flex:0 0 158px;display:flex;flex-direction:column;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .pnode-top{padding:10px 13px 9px;border-bottom:1px solid var(--border);}
+  .pnode-step{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;}
+  .pnode-name{font-size:13.5px;font-weight:800;color:var(--text);}
+  .pnode-body{padding:11px 13px;flex:1;display:flex;flex-direction:column;justify-content:space-between;}
+  .pnode-acts{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-direction:column;gap:4px;}
+  .pnode-acts li{font-size:11.5px;color:var(--text-2);line-height:1.4;padding-left:12px;position:relative;}
+  .pnode-acts li::before{content:"·";position:absolute;left:2px;color:var(--text-3);font-weight:900;}
+  .pnode-acts li strong{color:var(--text);}
+  .pnode-out{font-size:10.5px;font-weight:700;padding:4px 7px;border-radius:4px;text-align:center;line-height:1.3;}
+  .pnode-io{flex:0 0 120px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:var(--surface-2);border:1.5px dashed var(--border);border-radius:10px;padding:16px 10px;gap:5px;}
+  .pnode-io-icon{font-size:26px;line-height:1;}
+  .pnode-io-label{font-size:12.5px;font-weight:800;color:var(--text);}
+  .pnode-io-sub{font-size:10.5px;color:var(--text-3);line-height:1.4;}
+  .pnode-io.is-out{background:var(--green-light);border:1.5px solid var(--green);}
+  .pnode-io.is-out .pnode-io-label{color:var(--green);}
+  .pnode-io.is-out .pnode-io-sub{color:var(--green);opacity:.75;}
+  .pconn{flex:0 0 28px;display:flex;align-items:center;justify-content:center;padding-bottom:22px;}
+  .pconn svg{width:20px;height:20px;}
+  .pt-blue .pnode-top{background:var(--accent-light);border-bottom-color:var(--accent);}
+  .pt-blue .pnode-step{color:var(--accent);}
+  .pt-blue .pnode-out{background:var(--accent-light);color:var(--accent);}
+  .pt-violet .pnode-top{background:var(--violet-light);border-bottom-color:var(--violet);}
+  .pt-violet .pnode-step{color:var(--violet);}
+  .pt-violet .pnode-out{background:var(--violet-light);color:var(--violet);}
+  .pt-amber .pnode-top{background:var(--amber-light);border-bottom-color:var(--amber);}
+  .pt-amber .pnode-step{color:var(--amber);}
+  .pt-amber .pnode-out{background:var(--amber-light);color:var(--amber);}
+  .pt-green .pnode-top{background:var(--green-light);border-bottom-color:var(--green);}
+  .pt-green .pnode-step{color:var(--green);}
+  .pt-green .pnode-out{background:var(--green-light);color:var(--green);}
+  .pipe-caps{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);align-items:center;}
+  .pipe-caps-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);white-space:nowrap;}
+  .cap-chip{font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);white-space:nowrap;}
+
+  /* Output cards */
+  .output-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+  .out-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);}
+  .out-preview{height:130px;background:var(--surface-2);display:flex;align-items:flex-end;justify-content:center;padding:12px 16px 0;border-bottom:1px solid var(--border);}
+  .out-preview svg{width:100%;max-width:300px;}
+  .out-head{padding:14px 18px 12px;border-bottom:1px solid var(--border);}
+  .out-type{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px;}
+  .is-html .out-type{color:var(--accent);}
+  .is-pdf .out-type{color:var(--violet);}
+  .out-name{font-size:15px;font-weight:800;color:var(--text);}
+  .out-tagline{font-size:12px;color:var(--text-2);margin-top:3px;}
+  .out-body{padding:14px 18px;}
+  .feat-list{list-style:none;padding:0;display:flex;flex-direction:column;gap:7px;}
+  .feat-list li{font-size:13px;color:var(--text-2);line-height:1.5;padding-left:18px;position:relative;}
+  .feat-list li::before{content:"→";position:absolute;left:0;font-weight:700;}
+  .is-html .feat-list li::before{color:var(--accent);}
+  .is-pdf .feat-list li::before{color:var(--violet);}
+  .feat-list li strong{color:var(--text);}
+
+  /* Install steps */
+  .install-steps{display:flex;flex-direction:column;gap:0;}
+  .ist{display:flex;gap:0;}
+  .ist-track{display:flex;flex-direction:column;align-items:center;width:52px;flex-shrink:0;}
+  .ist-num{width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0;}
+  .ist-line{flex:1;width:2px;background:var(--border);margin:4px 0;}
+  .ist:last-child .ist-line{display:none;}
+  .ist-card{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:12px;box-shadow:var(--shadow-sm);}
+  .ist-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;}
+  .ist-desc{font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:10px;}
+  .ist-desc:last-child{margin-bottom:0;}
+  pre{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:11px 14px;font-family:var(--mono);font-size:12.5px;color:var(--text-2);line-height:1.65;overflow-x:auto;margin-bottom:8px;white-space:pre;}
+  pre:last-child{margin-bottom:0;}
+  .kw{color:var(--accent);font-weight:700;}
+  .cm{color:var(--text-3);}
+  .str{color:var(--amber);}
+  .alt-label{font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.07em;margin:12px 0 6px;}
+
+  /* Methodology cards */
+  .mstack{display:flex;flex-direction:column;gap:18px;}
+  .mcard{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);}
+  .mcard-head{display:flex;align-items:center;gap:16px;padding:15px 20px;border-bottom:1px solid var(--border);background:var(--surface-2);}
+  .mcard-num{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0;}
+  .mn-blue{background:var(--accent);}
+  .mn-violet{background:var(--violet);}
+  .mn-green{background:var(--green);}
+  .mcard-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;}
+  .mcard-src{font-size:11.5px;color:var(--text-3);font-style:italic;}
+  .mcard-body{padding:18px 20px;}
+  .mcard-body p{font-size:13.5px;color:var(--text-2);line-height:1.65;margin-bottom:10px;}
+  .mcard-body p:last-child{margin-bottom:0;}
+  .mcheck{margin:0 0 12px;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;}
+  .mcheck li{font-size:13.5px;color:var(--text-2);line-height:1.5;padding-left:22px;position:relative;}
+  .mcheck li::before{content:"→";position:absolute;left:0;color:var(--accent);font-weight:700;}
+  .mcheck li strong{color:var(--text);}
+  .mcard-ref{font-size:11.5px;color:var(--text-3);font-style:italic;border-top:1px solid var(--border);padding-top:10px;margin-top:4px;}
+  .eda-cycle{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:12px 0;}
+  .eda-step{background:var(--violet-light);color:var(--violet);border:1px solid var(--violet);border-radius:20px;font-size:12.5px;font-weight:700;padding:6px 13px;white-space:nowrap;}
+  .eda-arr{color:var(--text-3);font-size:15px;}
+  .ubm{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0;}
+  .ubm-col{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:13px;text-align:center;}
+  .ubm-lv{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);margin-bottom:4px;}
+  .ubm-name{font-size:14.5px;font-weight:800;color:var(--text);margin-bottom:5px;}
+  .ubm-q{font-size:12px;color:var(--accent);font-weight:700;margin-bottom:5px;}
+  .ubm-eg{font-size:11.5px;color:var(--text-3);line-height:1.45;}
+  .mflow{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:13px 18px;margin-top:18px;box-shadow:var(--shadow-sm);}
+  .mflow-item{font-size:13px;font-weight:700;color:var(--accent);white-space:nowrap;}
+  .mflow-arr{color:var(--text-3);font-size:14px;}
+  .mflow-end{font-size:13px;font-weight:700;color:var(--green);white-space:nowrap;}
+
+  @media(max-width:860px){
+    .hero{grid-template-columns:1fr;gap:28px;}
+    .output-grid{grid-template-columns:1fr;}
+    .ubm{grid-template-columns:1fr;}
+  }
+  @media(max-width:560px){main{padding:28px 14px 72px;}}
+</style>
+
+<nav>
+  <span class="nav-brand"><span>/</span>analise-descritiva-pipeline</span>
+  <a href="#pipeline">Pipeline</a>
+  <a href="#outputs">Outputs</a>
+  <a href="#install">Instalação</a>
+  <a href="#metodologias">Metodologias</a>
+</nav>
+
+<main>
+
+<!-- HERO -->
+<div class="hero">
+  <div>
+    <div class="eyebrow">Skill para Claude Code</div>
+    <h1>Pipeline completo de análise descritiva</h1>
+    <p class="hero-sub">
+      Do arquivo bruto ao dashboard interativo ou relatório PDF — em 9 fases estruturadas, com checkpointing automático e metodologia acadêmica aplicada.
+    </p>
+    <div class="cmd-row">
+      <span class="cmd-prompt">claude&gt;</span>
+      <span class="cmd-text">/analise-descritiva-pipeline</span>
+      <span class="cmd-cursor"></span>
+    </div>
+  </div>
+
+  <div class="chat-mock">
+    <div class="chat-bar">
+      <div class="chat-dots">
+        <div class="chat-dot" style="background:#FF5F57"></div>
+        <div class="chat-dot" style="background:#FFBD2E"></div>
+        <div class="chat-dot" style="background:#28C840"></div>
+      </div>
+      <span class="chat-title">Claude Code</span>
+    </div>
+    <div class="chat-body">
+      <div class="msg msg-user">
+        <div class="msg-bubble">/analise-descritiva-pipeline</div>
+      </div>
+      <div class="msg msg-ai">
+        <div class="msg-bubble">
+          Olá! Vou guiar você pelo pipeline completo.<br><br>
+          <strong>Fase 1 — Levantamento</strong><br>
+          Algumas perguntas rápidas:<br>
+          <ul>
+            <li>Qual o objetivo desta análise?</li>
+            <li>Qual arquivo de dados usar?</li>
+            <li>Output desejado: HTML ou PDF?</li>
+          </ul>
+        </div>
+      </div>
+      <div class="msg msg-user">
+        <div class="msg-bubble">vendas_2024.csv — quero um dashboard HTML</div>
+      </div>
+      <div class="msg msg-ai">
+        <div class="msg-bubble">
+          <div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PIPELINE -->
+<section id="pipeline">
+  <div class="sec-head">
+    <span class="badge b-blue">9 fases</span>
+    <h2>Como o pipeline funciona</h2>
+  </div>
+  <div class="callout">
+    Cada fase salva um arquivo <code style="font-family:var(--mono);font-size:12px;background:var(--accent-light);padding:1px 5px;border-radius:3px">fase_N_ok.json</code> no scratchpad. Se a análise for interrompida — por limite de contexto ou qualquer razão — o Claude detecta de onde parou e pergunta se quer continuar.
+  </div>
+
+  <div class="pipeline-wrap">
+    <div class="pipeline-title">Visão geral do fluxo</div>
+    <div class="pipeline-sub">Passe o scroll para ver todas as 9 fases — do arquivo bruto ao output final.</div>
+    <div class="pipeline">
+
+      <div class="pnode-io">
+        <div class="pnode-io-icon">🗂️</div>
+        <div class="pnode-io-label">Dados Brutos</div>
+        <div class="pnode-io-sub">CSV · Excel · DB · API</div>
+      </div>
+      <div class="pconn"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+      <div class="pnode pt-blue">
+        <div class="pnode-top"><div class="pnode-step">Fase 0</div><div class="pnode-name">Inicialização</div></div>
+        <div class="pnode-body">
+          <ul class="pnode-acts">
+            <li>Detecta SO (Win/Mac/Linux)</li>
+            <li>Define diretório scratchpad</li>
+            <li>Verifica análise anterior</li>
+          </ul>
+          <div class="pnode-out">Ambiente configurado</div>
+        </div>
+      </div>
+      <div class="pconn"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+      <div class="pnode pt-blue">
+        <div class="pnode-top"><div class="pnode-step">Fase 1</div><div class="pnode-name">Levantamento</div></div>
+        <div class="pnode-body">
+          <ul class="pnode-acts">
+            <li>8 perguntas em 2 rodadas</li>
+            <li>Objetivo e contexto</li>
+            <li>Arquivo + métricas</li>
+          </ul>
+          <div class="pnode-out">Requisitos mapeados</div>
+        </div>
+      </div>
+      <div class="pconn"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+      <div class="pnode pt-blue">
+        <div class="pnode-top"><div class="pnode-step">Fase 2</div><div class="pnode-name">Arquitetura</div></div>
+        <div class="pnode-body">
+          <ul class="pnode-acts">
+            <li>Plano completo apresentado</li>
+            <li>Colunas e hipóteses</li>
+            <li><strong>Aguarda aprovação</strong></li>
+          </ul>
+          <div class="pnode-out">Plano aprovado</div>
+        </div>
+      </div>
+      <div class="pconn"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+      <div class="pnode pt-blue">
+        <div class="pnode-top"><div class="pnode-step">Fase 3</div><div class="pnode-name">Escolha Output</div></div>
+        <div class="pnode-body">
+          <ul class="pnode-acts">
+            <li>Dashboard HTML</li>
+            <li>Relatório PDF</li>
+            <li>Você decide</li>
+          </ul>
+          <div class="pnode-out">Formato definido</div>
+        </div>
+      </div>
+      <div class="pconn"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+      <div class="pnode pt-violet">
+        <div class="pnode-top"><div class="pnode-step">Fase 4</div><div class="pnode-name">Data Profiling</div></div>
+        <div class="pnode-body">
+          <ul class="pnode-acts">
+            <li>Volume e tipos de campo</li>
+            <li>Nulos e cardinalidade</li>
+            <li>Ranges e anomalias</li>
+          </ul>
+          <div class="pnode-out">Dados validados</div>
+        </div>
+      </div>
+      <div class="pconn"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+      <div class="pnode pt-violet">
+        <div class="pnode-top"><div class="pnode-step">Fase 5</div><div class="pnode-name">EDA</div></div>
+        <div class="pnode-body">
+          <ul class="pnode-acts">
+            <li>Ciclo Tukey × 2/campo</li>
+            <li>Padrões emergentes</li>
+            <li>Hipóteses formuladas</li>
+          </ul>
+          <div class="pnode-out">Insights iniciais</div>
+        </div>
+      </div>
+      <div class="pconn"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+      <div class="pnode pt-amber">
+        <div class="pnode-top"><div class="pnode-step">Fase 6</div><div class="pnode-name">U → B → M</div></div>
+        <div class="pnode-body">
+          <ul class="pnode-acts">
+            <li><strong>Univariada</strong> — campo a campo</li>
+            <li><strong>Bivariada</strong> — pares</li>
+            <li><strong>Multivariada</strong> — conjunto</li>
+          </ul>
+          <div class="pnode-out">Métricas completas</div>
+        </div>
+      </div>
+      <div class="pconn"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+      <div class="pnode pt-amber">
+        <div class="pnode-top"><div class="pnode-step">Fase 7</div><div class="pnode-name">Geração</div></div>
+        <div class="pnode-body">
+          <ul class="pnode-acts">
+            <li>Aplica /dataviz</li>
+            <li>Aplica /artifact-design</li>
+            <li>HTML ou PDF gerado</li>
+          </ul>
+          <div class="pnode-out">Output entregue</div>
+        </div>
+      </div>
+      <div class="pconn"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+      <div class="pnode pt-green">
+        <div class="pnode-top"><div class="pnode-step">Fase 8</div><div class="pnode-name">Metodologia</div></div>
+        <div class="pnode-body">
+          <ul class="pnode-acts">
+            <li>Linguagem simples</li>
+            <li>Analogias lúdicas</li>
+            <li>Para não-especialistas</li>
+          </ul>
+          <div class="pnode-out">Contexto acessível</div>
+        </div>
+      </div>
+      <div class="pconn"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+      <div class="pnode pt-green">
+        <div class="pnode-top"><div class="pnode-step">Fase 9</div><div class="pnode-name">Encerramento</div></div>
+        <div class="pnode-body">
+          <ul class="pnode-acts">
+            <li>Checkpoint final salvo</li>
+            <li>Oferta de ajustes</li>
+            <li>Novos ângulos</li>
+          </ul>
+          <div class="pnode-out">Análise completa</div>
+        </div>
+      </div>
+      <div class="pconn"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="var(--text-3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+      <div class="pnode-io is-out">
+        <div class="pnode-io-icon">📊</div>
+        <div class="pnode-io-label">Output</div>
+        <div class="pnode-io-sub">Dashboard HTML ou Relatório PDF</div>
+      </div>
+
+    </div>
+    <div class="pipe-caps">
+      <span class="pipe-caps-label">Resiliência:</span>
+      <span class="cap-chip">Checkpoint por fase</span>
+      <span class="cap-chip">Modo retomada</span>
+      <span class="cap-chip">Subagente &gt;50k linhas</span>
+      <span class="cap-chip">Verbosidade controlada</span>
+      <span class="cap-chip">Windows · macOS · Linux</span>
+    </div>
+  </div>
+</section>
+
+<!-- OUTPUTS -->
+<section id="outputs">
+  <div class="sec-head">
+    <span class="badge b-violet">2 formatos</span>
+    <h2>O que o pipeline entrega</h2>
+  </div>
+
+  <div class="output-grid">
+
+    <div class="out-card is-html">
+      <div class="out-preview">
+        <svg viewBox="0 0 300 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="4" width="70" height="26" rx="5" fill="var(--accent-light)" stroke="var(--accent)" stroke-width="1"/>
+          <text x="37" y="13" text-anchor="middle" font-size="6" fill="var(--accent)" font-weight="700" font-family="system-ui">TICKET MÉDIO</text>
+          <text x="37" y="24" text-anchor="middle" font-size="9" fill="var(--accent)" font-weight="800" font-family="system-ui">R$ 48,90</text>
+          <rect x="78" y="4" width="70" height="26" rx="5" fill="var(--green-light)" stroke="var(--green)" stroke-width="1"/>
+          <text x="113" y="13" text-anchor="middle" font-size="6" fill="var(--green)" font-weight="700" font-family="system-ui">USUÁRIOS</text>
+          <text x="113" y="24" text-anchor="middle" font-size="9" fill="var(--green)" font-weight="800" font-family="system-ui">12.847</text>
+          <rect x="154" y="4" width="70" height="26" rx="5" fill="var(--violet-light)" stroke="var(--violet)" stroke-width="1"/>
+          <text x="189" y="13" text-anchor="middle" font-size="6" fill="var(--violet)" font-weight="700" font-family="system-ui">RECEITA</text>
+          <text x="189" y="24" text-anchor="middle" font-size="9" fill="var(--violet)" font-weight="800" font-family="system-ui">R$ 628k</text>
+          <polygon points="10,95 10,75 46,75 46,60 82,60 82,72 118,72 118,52 154,52 154,68 190,68 190,48 226,48 226,95" fill="var(--accent)" opacity=".12"/>
+          <polyline points="10,75 46,75 46,60 82,60 82,72 118,72 118,52 154,52 154,68 190,68 190,48 226,48" stroke="var(--accent)" stroke-width="1.8" stroke-linejoin="round" fill="none"/>
+          <circle cx="226" cy="48" r="3" fill="var(--accent)"/>
+          <rect x="205" y="34" width="56" height="14" rx="3" fill="var(--surface)" stroke="var(--border)" stroke-width="1"/>
+          <text x="233" y="43" text-anchor="middle" font-size="6" fill="var(--text-2)" font-family="system-ui">Jul: R$114k ▲12%</text>
+          <line x1="250" y1="95" x2="296" y2="44" stroke="var(--border)" stroke-width="1" stroke-dasharray="2,2"/>
+          <polygon points="250,95 296,95 296,44" fill="var(--amber)" opacity=".15"/>
+          <polyline points="250,95 260,93 272,88 280,80 286,70 292,57 296,44" stroke="var(--accent)" stroke-width="1.5" fill="none"/>
+          <text x="255" y="70" font-size="5.5" fill="var(--text-3)" font-family="system-ui">Lorenz</text>
+        </svg>
+      </div>
+      <div class="out-head">
+        <div class="out-type">Output A</div>
+        <div class="out-name">Dashboard Interativo HTML</div>
+        <div class="out-tagline">Artifact compartilhável — link público ou privado</div>
+      </div>
+      <div class="out-body">
+        <ul class="feat-list">
+          <li><strong>KPIs em destaque</strong> com valores calculados</li>
+          <li><strong>Gráficos com tooltip</strong> interativo ao passar o mouse</li>
+          <li><strong>Curva de Lorenz + Gini</strong>, barras, área e Pareto</li>
+          <li><strong>Tema claro e escuro</strong> — segue o sistema do viewer</li>
+          <li><strong>Link compartilhável</strong> via Claude Code artifacts</li>
+          <li><strong>Seção de metodologia</strong> em linguagem acessível</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="out-card is-pdf">
+      <div class="out-preview" style="background:var(--violet-light);">
+        <svg viewBox="0 0 200 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="35" y="5" width="130" height="92" rx="3" fill="var(--border)" opacity=".6"/>
+          <rect x="32" y="3" width="130" height="92" rx="3" fill="var(--surface)"/>
+          <rect x="32" y="3" width="130" height="22" rx="3" fill="var(--violet)"/>
+          <rect x="32" y="17" width="130" height="8" fill="var(--violet)"/>
+          <text x="97" y="12" text-anchor="middle" font-size="7" fill="#fff" font-weight="800" font-family="system-ui">Relatório Analítico</text>
+          <text x="97" y="20" text-anchor="middle" font-size="5" fill="rgba(255,255,255,.7)" font-family="system-ui">Dashboard de Vendas 2024</text>
+          <rect x="40" y="31" width="34" height="14" rx="2" fill="var(--violet-light)" stroke="var(--violet)" stroke-width=".5"/>
+          <text x="57" y="40" text-anchor="middle" font-size="5" fill="var(--violet)" font-weight="700" font-family="system-ui">R$ 628k</text>
+          <rect x="79" y="31" width="34" height="14" rx="2" fill="var(--green-light)" stroke="var(--green)" stroke-width=".5"/>
+          <text x="96" y="40" text-anchor="middle" font-size="5" fill="var(--green)" font-weight="700" font-family="system-ui">12.847 usr</text>
+          <rect x="118" y="31" width="34" height="14" rx="2" fill="var(--accent-light)" stroke="var(--accent)" stroke-width=".5"/>
+          <text x="135" y="40" text-anchor="middle" font-size="5" fill="var(--accent)" font-weight="700" font-family="system-ui">R$48,90 avg</text>
+          <rect x="40" y="52" width="6" height="28" rx="1" fill="var(--accent)" opacity=".7"/>
+          <rect x="50" y="58" width="6" height="22" rx="1" fill="var(--accent)" opacity=".7"/>
+          <rect x="60" y="48" width="6" height="32" rx="1" fill="var(--accent)"/>
+          <rect x="70" y="54" width="6" height="26" rx="1" fill="var(--accent)" opacity=".7"/>
+          <rect x="80" y="62" width="6" height="18" rx="1" fill="var(--accent)" opacity=".5"/>
+          <line x1="105" y1="80" x2="150" y2="52" stroke="var(--border)" stroke-width=".8" stroke-dasharray="2,2"/>
+          <polyline points="105,80 115,79 122,75 130,68 138,62 144,57 150,52" stroke="var(--violet)" stroke-width="1.2" fill="none"/>
+          <polygon points="105,80 150,80 150,52" fill="var(--amber)" opacity=".2"/>
+          <rect x="32" y="3" width="2" height="92" fill="var(--violet)"/>
+          <rect x="160" y="3" width="2" height="92" fill="var(--violet)"/>
+        </svg>
+      </div>
+      <div class="out-head">
+        <div class="out-type">Output B</div>
+        <div class="out-name">Relatório Analítico PDF</div>
+        <div class="out-tagline">Salvo localmente — pronto para impressão e envio</div>
+      </div>
+      <div class="out-body">
+        <ul class="feat-list">
+          <li><strong>Hero full-bleed</strong> — borda a borda, margem zero</li>
+          <li><strong>Gráficos vetoriais</strong> gerados em Python/reportlab</li>
+          <li><strong>Curva de Lorenz, barras FTD, balanço líquido</strong></li>
+          <li><strong>Sumário executivo</strong> com achados em destaque</li>
+          <li><strong>Seção de metodologia</strong> com analogias lúdicas</li>
+          <li><strong>Sem dependências externas</strong> além de reportlab</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- INSTALL -->
+<section id="install">
+  <div class="sec-head">
+    <span class="badge b-green">Quickstart</span>
+    <h2>Instalar e usar</h2>
+  </div>
+
+  <div class="install-steps">
+
+    <div class="ist">
+      <div class="ist-track"><div class="ist-num">1</div><div class="ist-line"></div></div>
+      <div class="ist-card">
+        <div class="ist-title">Pré-requisitos</div>
+        <p class="ist-desc">Claude Code instalado e autenticado. Para o output PDF, instale também o <code style="font-family:var(--mono);font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:3px">reportlab</code>:</p>
+        <pre><span class="kw">pip</span> install reportlab</pre>
+      </div>
+    </div>
+
+    <div class="ist">
+      <div class="ist-track"><div class="ist-num">2</div><div class="ist-line"></div></div>
+      <div class="ist-card">
+        <div class="ist-title">Instalar a skill</div>
+        <div class="alt-label">Opção A — como projeto (recomendado)</div>
+        <p class="ist-desc">Clone e abra com Claude Code. As skills ficam disponíveis automaticamente dentro do projeto.</p>
+        <pre><span class="kw">git</span> clone https://github.com/leo-philippe/skills_analise_descritiva.git
+<span class="kw">cd</span> skills_analise_descritiva
+<span class="kw">claude</span></pre>
+        <div class="alt-label">Opção B — instalação global</div>
+        <p class="ist-desc">Copie para o diretório global. Disponível em qualquer projeto após isso.</p>
+        <pre><span class="cm"># macOS / Linux</span>
+<span class="kw">cp</span> .claude/skills/analise-descritiva-pipeline.md ~/.claude/skills/
+
+<span class="cm"># Windows (PowerShell)</span>
+<span class="kw">Copy-Item</span> <span class="str">".claude\skills\analise-descritiva-pipeline.md"</span> `
+           <span class="str">"$env:USERPROFILE\.claude\skills\"</span></pre>
+      </div>
+    </div>
+
+    <div class="ist">
+      <div class="ist-track"><div class="ist-num">3</div><div class="ist-line"></div></div>
+      <div class="ist-card">
+        <div class="ist-title">Usar — é só chamar a skill</div>
+        <p class="ist-desc">Com Claude Code aberto no seu projeto, invoque:</p>
+        <pre><span class="kw">/analise-descritiva-pipeline</span></pre>
+        <p class="ist-desc">O Claude vai conduzir o levantamento de requisitos (2 rodadas de perguntas), apresentar um plano para aprovação e executar as 9 fases automaticamente. Você só precisa fornecer o arquivo de dados quando solicitado.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- METODOLOGIAS -->
+<section id="metodologias">
+  <div class="sec-head">
+    <span class="badge b-amber">Fundamentos</span>
+    <h2>3 metodologias acadêmicas integradas</h2>
+  </div>
+  <div class="callout">
+    O pipeline integra três metodologias consolidadas, referenciadas em literatura científica, aplicadas em sequência lógica.
+  </div>
+
+  <div class="mstack">
+
+    <div class="mcard">
+      <div class="mcard-head">
+        <div class="mcard-num mn-blue">1</div>
+        <div>
+          <div class="mcard-title">Data Profiling — "Antes de analisar, apresente-se aos seus dados"</div>
+          <div class="mcard-src">Rahm &amp; Do (2000) — IEEE Data Engineering Bulletin</div>
+        </div>
+      </div>
+      <div class="mcard-body">
+        <div class="analogy">
+          Imagine que você chegou em um trabalho novo e precisa liderar uma equipe que nunca viu antes. Você não vai distribuir tarefas antes de saber quem são essas pessoas, o que cada uma faz e se alguma está faltando — certo? Com os seus arquivos de dados é exatamente a mesma coisa.
+        </div>
+        <p>Abra os arquivos e responda estas perguntas — uma coluna de cada vez:</p>
+        <ul class="mcheck">
+          <li><strong>Que tipo de informação é essa?</strong> — número, texto, data, código? Saber o tipo evita análises erradas desde o início.</li>
+          <li><strong>Tem campos em branco?</strong> — se sim, quantos e onde? Um campo 80% vazio pode ser inútil para a análise.</li>
+          <li><strong>Os valores fazem sentido?</strong> — uma idade de 300 anos, um CPF com letras ou uma venda negativa são alertas vermelhos.</li>
+          <li><strong>Os dados têm um período claro?</strong> — de quando a quando vai o histórico? Isso define o escopo de tudo que vem depois.</li>
+        </ul>
+        <div class="mcard-ref">Rahm, E. &amp; Do, H.H. (2000). Data Cleaning: Problems and Current Approaches. <em>IEEE Data Engineering Bulletin</em>, 23(4), 3–13.</div>
+      </div>
+    </div>
+
+    <div class="mcard">
+      <div class="mcard-head">
+        <div class="mcard-num mn-violet">2</div>
+        <div>
+          <div class="mcard-title">EDA — "Converse com os dados. Deixe eles te surpreenderem."</div>
+          <div class="mcard-src">Tukey (1977) · De Mast &amp; Trip (2007) — Journal of Quality Technology</div>
+        </div>
+      </div>
+      <div class="mcard-body">
+        <div class="analogy">
+          Pense em uma conversa de verdade: você faz uma pergunta, ouve a resposta, e a resposta te faz pensar em uma nova pergunta. Ninguém entra em uma conversa com o roteiro completo escrito — você vai descobrindo no caminho. A EDA funciona exatamente assim.
+        </div>
+        <p>O ciclo criado por Tukey se repete quantas vezes forem necessárias:</p>
+        <div class="eda-cycle">
+          <div class="eda-step">Olhe os dados</div>
+          <div class="eda-arr">→</div>
+          <div class="eda-step">Encontre algo interessante</div>
+          <div class="eda-arr">→</div>
+          <div class="eda-step">Interprete o que viu</div>
+          <div class="eda-arr">→</div>
+          <div class="eda-step">Nova pergunta</div>
+          <div class="eda-arr">↩ repete</div>
+        </div>
+        <p>Use os gráficos e métricas do output como ferramentas dentro desse ciclo: cada visualização é uma forma diferente de olhar para os dados e provocar uma nova pergunta de negócio.</p>
+        <div class="mcard-ref">Tukey, J.W. (1977). <em>Exploratory Data Analysis</em>. Addison-Wesley.</div>
+      </div>
+    </div>
+
+    <div class="mcard">
+      <div class="mcard-head">
+        <div class="mcard-num mn-green">3</div>
+        <div>
+          <div class="mcard-title">Framework U-B-M — "Do simples ao complexo. Nunca pule etapas."</div>
+          <div class="mcard-src">Peat &amp; Barton (2005) — Medical Statistics; PMC/NCBI</div>
+        </div>
+      </div>
+      <div class="mcard-body">
+        <div class="analogy">
+          Aprender a cozinhar tem uma ordem: primeiro você entende cada ingrediente sozinho. Depois aprende como eles se combinam. E só então monta um prato completo. Pular para o prato sem entender o ingrediente é a receita do desastre.
+        </div>
+        <div class="ubm">
+          <div class="ubm-col">
+            <div class="ubm-lv">Nível 1</div>
+            <div class="ubm-name">Univariada</div>
+            <div class="ubm-q">"O que é essa variável?"</div>
+            <div class="ubm-eg">Uma coluna de cada vez — média, mediana, distribuição, nulos.</div>
+          </div>
+          <div class="ubm-col">
+            <div class="ubm-lv">Nível 2</div>
+            <div class="ubm-name">Bivariada</div>
+            <div class="ubm-q">"Essas duas têm relação?"</div>
+            <div class="ubm-eg">Dois campos juntos — scatter, correlação, cross-tab.</div>
+          </div>
+          <div class="ubm-col">
+            <div class="ubm-lv">Nível 3</div>
+            <div class="ubm-name">Multivariada</div>
+            <div class="ubm-q">"O que tudo mostra junto?"</div>
+            <div class="ubm-eg">Várias colunas — heatmap, bubble chart, visão completa.</div>
+          </div>
+        </div>
+        <p>A regra de ouro: <strong>nunca vá para o nível 2 sem ter terminado o nível 1.</strong> Relações entre variáveis que você não entende individualmente levam a conclusões erradas.</p>
+        <div class="mcard-ref">Peat, J. &amp; Barton, B. (2005). <em>Medical Statistics: A Guide to Data Analysis and Critical Appraisal</em>. Blackwell.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="mflow">
+    <span class="mflow-item">1. Data Profiling</span>
+    <span class="mflow-arr">→</span>
+    <span class="mflow-item">2. EDA (ciclo)</span>
+    <span class="mflow-arr">→</span>
+    <span class="mflow-item">3. U → B → M</span>
+    <span class="mflow-arr">→</span>
+    <span class="mflow-end">Output analítico completo</span>
+  </div>
+</section>
+
+</main>
+</body>
+</html>

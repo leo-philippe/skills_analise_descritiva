@@ -3,6 +3,8 @@
 > Pipeline completo de análise descritiva — do arquivo bruto ao relatório final.
 > Qualquer pessoa, de qualquer área, consegue usar.
 
+**[→ Ver Quickstart Visual](https://leo-philippe.github.io/skills_analise_descritiva/)** — pipeline interativo, previews dos outputs e guia de instalação.
+
 ---
 
 ## O que é isso?
