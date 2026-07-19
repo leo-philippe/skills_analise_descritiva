@@ -139,3 +139,4 @@ Sugestões bem-vindas:
 ## Licença
 
 MIT — use, adapte e compartilhe livremente.
+
