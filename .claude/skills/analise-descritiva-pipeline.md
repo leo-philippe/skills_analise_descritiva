@@ -253,8 +253,102 @@ No chat: parágrafo único com os 3–5 achados principais.
 Leia `SCRATCH/fase_3_ok.json` para saber o formato.
 Leia `SCRATCH/fase_4_ok.json`, `fase_5_ok.json`, `fase_6_ok.json` para os dados.
 
-Invoque `dataviz` antes de gerar qualquer gráfico.
-Invoque `artifact-design` para calibrar o tratamento visual.
+### Princípios de Visualização (embutidos)
+
+**Escolha da forma — a pergunta é: qual é o trabalho do dado?**
+
+| Trabalho do dado | Forma correta |
+|---|---|
+| Comparar magnitudes entre categorias | Barras horizontais (valores longos) ou verticais (≤ 7 cats) |
+| Evolução no tempo | Linha de área — fill ~10% opacidade, linha 2px |
+| Proporção de um todo (≤ 3 partes) | Barra segmentada horizontal |
+| Distribuição de uma variável | Histograma ou box plot |
+| Concentração / desigualdade | Curva de Lorenz com zona Gini (âmbar, ~15% opac.) |
+| Regra 80/20 | Pareto — barras + linha acumulada no mesmo eixo Y |
+| Um único número-chave | Stat tile / hero number — sem gráfico |
+| Relação entre duas variáveis numéricas | Scatter plot |
+
+**Nunca:** eixo duplo Y (duas escalas no mesmo gráfico — use dois gráficos separados). Nunca pizza com mais de 3 fatias. Nunca rainbow/arco-íris como paleta sequencial.
+
+**Cor por função:**
+- **Série única** (barras, área): azul sequencial — `#0369A1` claro → escuro por magnitude
+- **Múltiplas categorias**: ordem fixa — azul `#0369A1`, violeta `#6D28D9`, âmbar `#B45309`, verde `#047857`. Nunca ciclar além dessas 4; a 5ª série vai para "Outros"
+- **Positivo / Negativo**: verde `#047857` e vermelho `#B91C1C` — nunca como cor de série
+- **Zona Gini / desigualdade**: âmbar com ~15% de opacidade
+- **Área sob curva**: azul com ~10% de opacidade
+- Em modo escuro, substitua pelos equivalentes: `#38BDF8`, `#A78BFA`, `#FBB024`, `#34D399`
+
+**Marcas e anatomia:**
+- Linhas: **2px** de espessura
+- Pontos em linhas: **≥ 8px**, somente em pontos-chave (início, fim, pico, mínimo)
+- Barras: bordas arredondadas **4px** nas pontas livres, ancoradas na baseline
+- Labels diretos: **apenas no ponto final ou no maior valor** — nunca número em cada ponto
+- Grid: linhas **1px** cor `var(--border)`, sem borda no eixo Y
+- Tooltip: obrigatório em charts HTML — crosshair + valor ao hover
+
+---
+
+### Princípios Visuais do Output HTML (embutidos)
+
+**Sistema de tokens CSS — copie exatamente:**
+
+```css
+:root {
+  --bg:#F0F4F8; --surface:#FFFFFF; --surface-2:#E4ECF4; --border:#C8D6E5;
+  --text:#0F1B2D; --text-2:#4A6077; --text-3:#7A94AA;
+  --accent:#0369A1; --accent-light:#DBEAFE;
+  --violet:#6D28D9; --violet-light:#EDE9FE;
+  --amber:#B45309; --amber-light:#FEF3C7;
+  --green:#047857; --green-light:#D1FAE5;
+  --shadow-sm:0 1px 2px rgba(15,27,45,.06);
+  --shadow:0 2px 6px rgba(15,27,45,.08);
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#07101E; --surface:#0F1D30; --surface-2:#172840; --border:#223450;
+  --text:#DDE8F4; --text-2:#7A9ABB; --text-3:#456077;
+  --accent:#38BDF8; --accent-light:#0B2A42;
+  --violet:#A78BFA; --violet-light:#1C1035;
+  --amber:#FBB024; --amber-light:#281A04;
+  --green:#34D399; --green-light:#052E1E;
+}}
+:root[data-theme="light"]{/* repete tokens light */}
+:root[data-theme="dark"]{/* repete tokens dark */}
+```
+
+**Tipografia:** `font-family: system-ui, -apple-system, 'Segoe UI', sans-serif` — **nunca** carregar fontes externas (URLs bloqueadas em artifacts). Títulos: `font-weight: 800`, `letter-spacing: -0.025em`, `text-wrap: balance`. Labels e badges em UPPERCASE com `letter-spacing: 0.08em`.
+
+**Layout:** Container principal: `max-width: 1080px; margin: 0 auto; padding: 48px 24px`. Use `display: flex; gap:` ou `display: grid; gap:` para espaçamento entre siblings — nunca `margin` individual entre cards do mesmo grupo. Tabelas e código com `overflow-x: auto` em container próprio (o `<body>` nunca deve rolar horizontalmente).
+
+**Componentes padrão:**
+
+```css
+/* Card */
+.card { background:var(--surface); border:1px solid var(--border);
+        border-radius:8px; padding:18px 20px;
+        box-shadow:0 1px 2px rgba(15,27,45,.06); }
+
+/* Badge */
+.badge { font-size:10.5px; font-weight:700; letter-spacing:.08em;
+         text-transform:uppercase; padding:3px 8px; border-radius:4px; }
+
+/* Nav sticky */
+nav { position:sticky; top:0; z-index:100; background:var(--surface);
+      border-bottom:1px solid var(--border); }
+
+/* Tabela */
+table { border-collapse:collapse; width:100%; }
+thead { background:var(--surface-2); }
+th { font-size:10.5px; font-weight:700; text-transform:uppercase;
+     letter-spacing:.07em; color:var(--text-3); padding:10px 16px;
+     border-bottom:1px solid var(--border); }
+td { padding:10px 16px; border-bottom:1px solid var(--border); }
+```
+
+**Responsivo:** breakpoint `860px` — grades de 2+ colunas viram 1 coluna. Breakpoint `560px` — padding reduzido para 14px lateral.
+
+**Ambos os temas obrigatórios:** implementar `@media(prefers-color-scheme:dark)` + overrides `:root[data-theme="dark"]` e `:root[data-theme="light"]`. O tema escuro não é inversão automática — redefinir os tokens com valores escolhidos e validar contraste.
+
+---
 
 ### Se DASHBOARD:
 
